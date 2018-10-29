@@ -63,8 +63,6 @@ class ActionModule(ActionBase):
             return {'failed': True, 'msg': 'missing required argument: %s' % exc}
 
         generated_flow_file = unfrackpath(generated_flow_file)
-        if not os.path.exists(generated_flow_file):
-            return {'failed': True, 'msg': 'path: %s does not exist.' % generated_flow_file}
         dest = generated_flow_file
 
         parser = unfrackpath(parser)
@@ -72,11 +70,17 @@ class ActionModule(ActionBase):
             return {'failed': True, 'msg': 'path: %s does not exist.' % parser}
         parser_file = parser
 
+        parsed_acl_file = self._task.args.get('parsed_acl_file')
+        if parsed_acl_file:
+            parsed_acl_file = unfrackpath(parsed_acl_file)
+
         #pd_json = self._create_packet_dict(out)
-        pd_json = self._parse_acl_with_textfsm(parser_file,
-                                    show_acl_output_buffer)
+        (pd_json, acl_json) = self._parse_acl_with_textfsm(parser_file,
+                              show_acl_output_buffer)
         try:
             changed = self._write_packet_dict(dest, pd_json)
+            if parsd_acl_file:
+                changed = self._write_packet_dict(parsed_acl_file, acl_json)
         except IOError as exc:
             result['failed'] = True
             result['msg'] = ('Exception received : %s' % exc)
@@ -225,7 +229,7 @@ class ActionModule(ActionBase):
                     original_terms['src'] = src_ip
                 if k == 'SRC_ANY' and v != '':
                     pd_it['src'] = "any"
-                    original_terms['src'] = netaddr.IPNetwork('0.0.0.0/0')
+                    original_terms['src'] = str(netaddr.IPNetwork('0.0.0.0/0'))
                 if k == 'SRC_HOST' and v != '':
                     pd_it['src'] = v
                     original_terms['src'] = v
@@ -249,7 +253,7 @@ class ActionModule(ActionBase):
                     original_terms['dst'] = dst_ip
                 if k == 'DST_ANY' and v != '':
                     pd_it['dst'] = "any"
-                    original_terms['dst'] = netaddr.IPNetwork('0.0.0.0/0')
+                    original_terms['dst'] = str(netaddr.IPNetwork('0.0.0.0/0'))
                 if k == 'DST_HOST' and v != '':
                     pd_it['dst'] = v
                     original_terms['dst'] = v
@@ -266,5 +270,4 @@ class ActionModule(ActionBase):
 
         # Store parsed acl on this object for later processing
         self._parsed_acl = parsed_acl
-        return json.dumps(pd, indent=4)
-
+        return (json.dumps(pd, indent=4), json.dumps(original_terms, indent=4))

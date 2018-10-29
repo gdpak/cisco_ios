@@ -12,3 +12,12 @@
       show_acl_output_buffer: "{{ acl_out_buffer.stdout }}"
       parser: "{{ role_path }}/parser_templates/net_operations/show_ip_access_list.yaml"
       generated_flow_file: "{{ generated_flow_file }}"
+  when: static_analysis_check is not defined or not static_analysis_check
+
+- name : parse acl and write results of packet dictionary and parsed ACL
+  parse_validate_acl:
+      show_acl_output_buffer: "{{ acl_out_buffer.stdout }}"
+      parser: "{{ role_path }}/parser_templates/net_operations/show_ip_access_list.yaml"
+      generated_flow_file: "{{ generated_flow_file }}"
+      parsed_acl_file: "{{ parsed_acl_file }}"
+  when: static_analysis_check is defined and static_analysis_check
